@@ -248,9 +248,59 @@ class DeadReckoning(Estimator):
 
     def update(self, _):
         if len(self.x_hat) > 0 and self.x_hat[-1][0] < self.x[-1][0]:
+        #     d : float
+        #     Half of the track width (m) of TurtleBot3 Burger.
+        #     r : float
+        #     Wheel radius (m) of the TurtleBot3 Burger.
+
             # TODO: Your implementation goes here!
             # You may ONLY use self.u and self.x[0] for estimation
-            raise NotImplementedError
+            # dt = self.dt
+            # T = len(self.u)+1
+            # t = 0
+            # self.x_hat.append(self.x[0])
+
+
+            # f = lambda t: np.array([[-self.r/(2*self.d), self.r/(2*self.d)],
+            #                         [(self.r/2) * np.cos(self.x_hat[t][1]), (self.r/2) * np.cos(self.x_hat[t][1])],
+            #                         [(self.r/2) * np.sin(self.x_hat[t][1]), (self.r/2) * np.sin(self.x_hat[t][1])],
+            #                         [1, 0],
+            #                         [0, 1]]) @ np.array([self.u[t][1], self.u[t][2]])
+            # g = lambda t: self.x_hat[t][-5:] + f(t) * dt
+
+            
+
+            # while t <= T - 1:
+            #     self.x_hat.append(g(t))
+            #     t += 1
+
+            dt = self.dt
+            latest_u = self.u[-1]  # [timestamp, wL, wR]
+            curr_state = np.array(self.x_hat[-1])  # [t, phi, x, y, thetaL, thetaR]
+            
+            # Extract wheel angular velocities
+            wL = latest_u[1]  # Left wheel angular velocity
+            wR = latest_u[2]  # Right wheel angular velocity
+            
+            # State derivatives
+            phi_dot = self.r/(2*self.d) * (-wL + wR)
+            x_dot = self.r/2 * (wL + wR) * np.cos(curr_state[1])
+            y_dot = self.r/2 * (wL + wR) * np.sin(curr_state[1])
+            thetaL_dot = wL
+            thetaR_dot = wR
+            
+            # New state using Euler integration
+            new_state = np.array([
+                latest_u[0],                      # timestamp
+                curr_state[1] + phi_dot * dt,     # phi
+                curr_state[2] + x_dot * dt,       # x
+                curr_state[3] + y_dot * dt,       # y
+                curr_state[4] + thetaL_dot * dt,  # theta_L
+                curr_state[5] + thetaR_dot * dt   # theta_R
+            ])
+            
+            self.x_hat.append(new_state)
+
 
 
 class KalmanFilter(Estimator):
@@ -281,6 +331,23 @@ class KalmanFilter(Estimator):
         self.phid = np.pi / 4
         # TODO: Your implementation goes here!
         # You may define the A, C, Q, R, and P matrices below.
+        self.A = np.eye(6)
+        self.B = np.array([
+            [1, 0, 0],      
+            [0, 0, 0],             
+            [0, self.r/2*np.cos(self.phid)*self.dt, self.r/2*np.cos(self.phid)*self.dt],  
+            [0, self.r/2*np.sin(self.phid)*self.dt, self.r/2*np.sin(self.phid)*self.dt], 
+            [0, self.dt, 0],             
+            [0, 0, self.dt]           
+        ])
+        self.C = np.array([
+        [1, 0, 0, 0, 0, 0],     
+        [0, 0, 1, 0, 0, 0],       
+        [0, 0, 0, 1, 0, 0]          
+        ])
+        self.Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.R = np.diag([0.1, 0.1, 0.1])
+        self.P = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
     # noinspection DuplicatedCode
     # noinspection PyPep8Naming
@@ -288,7 +355,18 @@ class KalmanFilter(Estimator):
         if len(self.x_hat) > 0 and self.x_hat[-1][0] < self.x[-1][0]:
             # TODO: Your implementation goes here!
             # You may use self.u, self.y, and self.x[0] for estimation
-            raise NotImplementedError
+
+            # Predictions
+            pred_x_hat = self.A @ self.x_hat[-1] + self.B @ self.u[-1]
+            pred_P = self.A @ self.P @ self.A.T + self.Q
+
+            # Updates
+            K = pred_P @ self.C.T @ np.linalg.inv(self.C @ pred_P @ self.C.T + self.R)
+            x_new = pred_x_hat + K @ (self.y[-1] - self.C @ pred_x_hat)
+            self.P = (np.eye(6) - K @ self.C) @ pred_P
+
+            self.x_hat.append(x_new)
+
 
 
 # noinspection PyPep8Naming

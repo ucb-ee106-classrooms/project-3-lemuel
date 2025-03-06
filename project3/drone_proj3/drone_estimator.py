@@ -57,6 +57,9 @@ class Estimator:
         self.y = []
         self.x_hat = []  # Your estimates go here!
         self.t = []
+
+
+        # graphing
         self.fig, self.axd = plt.subplot_mosaic(
             [['xz', 'phi'],
              ['xz', 'x'],
@@ -210,7 +213,31 @@ class DeadReckoning(Estimator):
         if len(self.x_hat) > 0:
             # TODO: Your implementation goes here!
             # You may ONLY use self.u and self.x[0] for estimation
-            raise NotImplementedError
+            dt = self.dt
+            latest_u = self.u[-1]  # [timestamp, u1, u2]
+            curr_state = np.array(self.x_hat[-1])  # [x_dot, z_dot, phi_dot, x_dot_dot, z_dot_dot, phi_dot_dot]
+            
+            
+            # State derivatives
+            x_dot = curr_state[3]
+            z_dot = curr_state[4]
+            phi_dot = curr_state[5]
+            x_dot_dot = (latest_u[0] * -np.sin(curr_state[2]) / self.m)
+            z_dot_dot = (latest_u[0] * np.cos(curr_state[2]) / self.m) - self.gr
+            phi_dot_dot = latest_u[1] / self.J
+
+
+            # New state using Euler integration
+            new_state = np.array([
+                curr_state[0] + x_dot * dt,                     # timestamp
+                curr_state[1] + z_dot * dt,     # phi
+                curr_state[2] + phi_dot * dt,       # x
+                curr_state[3] + x_dot_dot * dt,       # y
+                curr_state[4] + z_dot_dot * dt,
+                curr_state[5] + phi_dot_dot * dt   # theta_R
+            ])
+            
+            self.x_hat.append(new_state)
 
 # noinspection PyPep8Naming
 class ExtendedKalmanFilter(Estimator):
