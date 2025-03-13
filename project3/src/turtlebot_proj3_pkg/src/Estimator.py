@@ -235,10 +235,7 @@ class DeadReckoning(Estimator):
     Example
     ----------
     To run dead reckoning:
-        $ roslaunch proj3_pkg unicycle_bringup.launch \
-            estimator_type:=dead_reckoning \
-            noise_injection:=true \
-            freeze_bearing:=false
+        $ roslaunch proj3_pkg unicycle_bringup.launch estimator_type:=dr noise_injection:=true freeze_bearing:=false
     For debugging, you can simulate a noise-free unicycle model by setting
     noise_injection:=false.
     """
@@ -268,11 +265,7 @@ class DeadReckoning(Estimator):
             #                         [0, 1]]) @ np.array([self.u[t][1], self.u[t][2]])
             # g = lambda t: self.x_hat[t][-5:] + f(t) * dt
 
-            
-
-            # while t <= T - 1:
-            #     self.x_hat.append(g(t))
-            #     t += 1
+        
 
             dt = self.dt
             latest_u = self.u[-1]  # [timestamp, wL, wR]

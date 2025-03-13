@@ -270,28 +270,56 @@ class ExtendedKalmanFilter(Estimator):
         self.canvas_title = 'Extended Kalman Filter'
         # TODO: Your implementation goes here!
         # You may define the Q, R, and P matrices below.
+        #Values below copied from turtlebot, needs to be tuned
         self.A = None
         self.B = None
         self.C = None
-        self.Q = None
-        self.R = None
-        self.P = None
+        self.Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.R = np.diag([0.1, 0.1, 0.1])
+        self.P = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
     # noinspection DuplicatedCode
     def update(self, i):
         if len(self.x_hat) > 0: #and self.x_hat[-1][0] < self.x[-1][0]:
             # TODO: Your implementation goes here!
             # You may use self.u, self.y, and self.x[0] for estimation
-            raise NotImplementedError
+            dt = self.dt
+            latest_u = np.array(self.u[-1])
+            curr_state = np.array(self.x_hat[-1])
+
+            #State Extrapolation
+            px_hat = self.g(curr_state, latest_u)
+
+            #Dynamics Linearization
+            self.A = self.approx_A(curr_state, latest_u)
+
+            #Covariance Extrapolation
+            self.P = self.A @ self.P @ self.A.T + self.Q
+
+            #Measurement Linearization
+            self.C = self.approx_C(px_hat)
+
+            #kalman Gain
+            K = self.P @ self.C.T @ np.linalg.inv(self.C @ self.P @ self.C.T + self.R)
+
+            #State Update
+            curr_state = px_hat + K @ (self.y[i] - self.h(px_hat, self.y[i]))
+
+            #Covariance Update
+            self.P = (np.eye(6) - K @ self.C) @ self.P
+
+            return self.x_hat.append(curr_state)
+
 
     def g(self, x, u):
-        raise NotImplementedError
-
+        return None
+        
     def h(self, x, y_obs):
-        raise NotImplementedError
+        return np.array([np.sqrt((self.landmark[0] - x[0])**2 + (self.landmark[1])**2 + (self.landmark[2] - x[2])**2),
+                          np.arctan2(self.landmark[1] - x[1], self.landmark[0] - x[0]) - x[2]])
 
     def approx_A(self, x, u):
-        raise NotImplementedError
+        return None
     
     def approx_C(self, x):
-        raise NotImplementedError
+        return None
