@@ -274,9 +274,9 @@ class ExtendedKalmanFilter(Estimator):
         self.A = None
         self.B = None
         self.C = None
-        self.Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-        self.R = np.diag([0.1, 0.1, 0.1])
-        self.P = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.Q = np.diag([0.001, .001, .001, .001, .001, .001])
+        self.R = np.diag([0.1, 0.1])
+        self.P = np.diag([.001, .001, .001, .001, .001, .001])
 
     # noinspection DuplicatedCode
     def update(self, i):
@@ -312,14 +312,59 @@ class ExtendedKalmanFilter(Estimator):
 
 
     def g(self, x, u):
-        return None
+        dt = self.dt
+        
+        # f
+        x_dot = x[3]
+        z_dot = x[4]
+        phi_dot = x[5]
+        x_dot_dot = (u[0] * -np.sin(x[2]) / self.m)
+        z_dot_dot = (u[0] * np.cos(x[2]) / self.m) - self.gr
+        phi_dot_dot = u[1] / self.J
+        
+        # New state using Euler integration
+        new_state = np.array([
+                x[0] + x_dot * dt,    # timestamp
+                x[1] + z_dot * dt,     # phi
+                x[2] + phi_dot * dt,       # x
+                x[3] + x_dot_dot * dt,       # y
+                x[4] + z_dot_dot * dt,
+                x[5] + phi_dot_dot * dt   # theta_R
+            ])
+
+        return new_state
+            
         
     def h(self, x, y_obs):
         return np.array([np.sqrt((self.landmark[0] - x[0])**2 + (self.landmark[1])**2 + (self.landmark[2] - x[2])**2),
-                          np.arctan2(self.landmark[1] - x[1], self.landmark[0] - x[0]) - x[2]])
+                          0])
 
     def approx_A(self, x, u):
-        return None
+        A = np.eye(6)
+        dt = self.dt
+        # State derivatives
+
+        A[0, 3] = dt
+        A[1, 4] = dt
+        A[2, 5] = dt
+        A[3, 2] = -u[0] * np.cos(x[2]) / self.m * dt
+        A[4, 2] = -u[0] * np.sin(x[2]) / self.m * dt\
+        
+        return A
     
     def approx_C(self, x):
-        return None
+        # Extract state components
+        x_pos = x[0]
+        z_pos = x[1]
+        
+        # Calculate common terms
+        d = np.sqrt((self.landmark[0] - x_pos)**2 + (self.landmark[1])**2 + (self.landmark[2] - x[2])**2)
+        
+        # Initialize Jacobian matrix (2x6 since measurement is 2D)
+        C = np.zeros((2, 6))
+        
+        C[0,0] = (x_pos - self.landmark[0]) / d
+        C[0,1] = (z_pos - self.landmark[2]) / d
+        C[1,2] = 1
+        
+        return C
