@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 plt.rcParams['font.family'] = ['Arial']
 plt.rcParams['font.size'] = 14
 
@@ -203,14 +204,17 @@ class DeadReckoning(Estimator):
     Example
     ----------
     To run dead reckoning:
-        $ python drone_estimator_node.py --estimator dead_reckoning
+        $ python drone_estimator_node.py --estimator dr
     """
     def __init__(self, is_noisy=False):
         super().__init__(is_noisy)
         self.canvas_title = 'Dead Reckoning'
+        self.msq = np.zeros(3)
 
     def update(self, _):
         if len(self.x_hat) > 0:
+
+
             # TODO: Your implementation goes here!
             # You may ONLY use self.u and self.x[0] for estimation
             dt = self.dt
@@ -237,6 +241,13 @@ class DeadReckoning(Estimator):
                 curr_state[5] + phi_dot_dot * dt])
             
             self.x_hat.append(new_state)
+            
+            sq_error = (new_state[0:3] -  self.x[-1][0:3]) ** 2
+            self.msq = self.msq + sq_error
+            print(self.msq)
+            
+
+            
 
 # noinspection PyPep8Naming
 class ExtendedKalmanFilter(Estimator):
@@ -262,7 +273,7 @@ class ExtendedKalmanFilter(Estimator):
     Example
     ----------
     To run the extended Kalman filter:
-        $ python drone_estimator_node.py --estimator extended_kalman_filter
+        $ python drone_estimator_node.py --estimator ekf
     """
     def __init__(self, is_noisy=False):
         super().__init__(is_noisy)
@@ -270,6 +281,7 @@ class ExtendedKalmanFilter(Estimator):
         # TODO: Your implementation goes here!
         # You may define the Q, R, and P matrices below.
         #Values below copied from turtlebot, needs to be tuned
+        self.msq = np.zeros(3)
         self.A = None
         self.B = None
         self.C = None
@@ -306,6 +318,10 @@ class ExtendedKalmanFilter(Estimator):
 
             #Covariance Update
             self.P = (np.eye(6) - K @ self.C) @ self.P
+
+            sq_error = (curr_state[0:3] -  self.x[-1][0:3]) ** 2
+            self.msq = self.msq + sq_error
+            print(curr_state[0:3], self.x[-1][0:3])
 
             return self.x_hat.append(curr_state)
 
