@@ -229,13 +229,12 @@ class DeadReckoning(Estimator):
 
             # New state using Euler integration
             new_state = np.array([
-                curr_state[0] + x_dot * dt,                     # timestamp
-                curr_state[1] + z_dot * dt,     # phi
-                curr_state[2] + phi_dot * dt,       # x
-                curr_state[3] + x_dot_dot * dt,       # y
+                curr_state[0] + x_dot * dt,
+                curr_state[1] + z_dot * dt,
+                curr_state[2] + phi_dot * dt,
+                curr_state[3] + x_dot_dot * dt,
                 curr_state[4] + z_dot_dot * dt,
-                curr_state[5] + phi_dot_dot * dt   # theta_R
-            ])
+                curr_state[5] + phi_dot_dot * dt])
             
             self.x_hat.append(new_state)
 
@@ -274,9 +273,9 @@ class ExtendedKalmanFilter(Estimator):
         self.A = None
         self.B = None
         self.C = None
-        self.Q = np.diag([0.001, .001, .001, .001, .001, .001])
-        self.R = np.diag([0.1, 0.1])
-        self.P = np.diag([.001, .001, .001, .001, .001, .001])
+        self.Q = np.diag([1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8])
+        self.R = np.diag([100, 100])
+        self.P = np.diag([1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4])
 
     # noinspection DuplicatedCode
     def update(self, i):
@@ -337,7 +336,7 @@ class ExtendedKalmanFilter(Estimator):
         
     def h(self, x, y_obs):
         return np.array([np.sqrt((self.landmark[0] - x[0])**2 + (self.landmark[1])**2 + (self.landmark[2] - x[2])**2),
-                          0])
+                          x[2]])
 
     def approx_A(self, x, u):
         A = np.eye(6)

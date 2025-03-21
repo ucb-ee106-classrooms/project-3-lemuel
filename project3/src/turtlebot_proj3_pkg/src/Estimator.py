@@ -252,44 +252,29 @@ class DeadReckoning(Estimator):
 
             # TODO: Your implementation goes here!
             # You may ONLY use self.u and self.x[0] for estimation
-            # dt = self.dt
-            # T = len(self.u)+1
-            # t = 0
-            # self.x_hat.append(self.x[0])
-
-
-            # f = lambda t: np.array([[-self.r/(2*self.d), self.r/(2*self.d)],
-            #                         [(self.r/2) * np.cos(self.x_hat[t][1]), (self.r/2) * np.cos(self.x_hat[t][1])],
-            #                         [(self.r/2) * np.sin(self.x_hat[t][1]), (self.r/2) * np.sin(self.x_hat[t][1])],
-            #                         [1, 0],
-            #                         [0, 1]]) @ np.array([self.u[t][1], self.u[t][2]])
-            # g = lambda t: self.x_hat[t][-5:] + f(t) * dt
-
-        
 
             dt = self.dt
-            latest_u = self.u[-1]  # [timestamp, wL, wR]
-            curr_state = np.array(self.x_hat[-1])  # [t, phi, x, y, thetaL, thetaR]
+            latest_u = self.u[-1]
+            curr_state = np.array(self.x_hat[-1])
             
-            # Extract wheel angular velocities
-            wL = latest_u[1]  # Left wheel angular velocity
-            wR = latest_u[2]  # Right wheel angular velocity
+            wL = latest_u[1]
+            wR = latest_u[2]
             
-            # State derivatives
+            #derivs
             phi_dot = self.r/(2*self.d) * (-wL + wR)
             x_dot = self.r/2 * (wL + wR) * np.cos(curr_state[1])
             y_dot = self.r/2 * (wL + wR) * np.sin(curr_state[1])
             thetaL_dot = wL
             thetaR_dot = wR
             
-            # New state using Euler integration
+            #vectorized
             new_state = np.array([
-                latest_u[0],                      # timestamp
-                curr_state[1] + phi_dot * dt,     # phi
-                curr_state[2] + x_dot * dt,       # x
-                curr_state[3] + y_dot * dt,       # y
-                curr_state[4] + thetaL_dot * dt,  # theta_L
-                curr_state[5] + thetaR_dot * dt   # theta_R
+                latest_u[0],                      
+                curr_state[1] + phi_dot * dt,    
+                curr_state[2] + x_dot * dt,      
+                curr_state[3] + y_dot * dt,       
+                curr_state[4] + thetaL_dot * dt,  
+                curr_state[5] + thetaR_dot * dt  
             ])
             
             self.x_hat.append(new_state)
@@ -338,9 +323,9 @@ class KalmanFilter(Estimator):
         [0, 0, 1, 0, 0, 0],       
         [0, 0, 0, 1, 0, 0]          
         ])
-        self.Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-        self.R = np.diag([0.1, 0.1, 0.1])
-        self.P = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.Q = np.eye(6) * 1e-3
+        self.R = np.eye(3) * 1e-5
+        self.P = np.eye(6) * 1e-3
 
     # noinspection DuplicatedCode
     # noinspection PyPep8Naming
